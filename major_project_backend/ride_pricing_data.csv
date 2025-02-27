@@ -1,0 +1,6 @@
+city_id,demand,supply,weather,traffic,base_fare,dynamic_fare
+city_1,100,80,Rainy,High,50,75
+city_2,60,90,Sunny,Low,40,50
+city_3,120,70,Cloudy,Medium,55,85
+city_4,90,100,Sunny,Medium,45,60
+city_5,150,50,Rainy,High,60,100
