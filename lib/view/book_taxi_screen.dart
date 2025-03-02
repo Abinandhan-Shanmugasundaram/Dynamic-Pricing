@@ -3,19 +3,18 @@ import 'package:flutter/material.dart';
 import '../services/dynamic_pricing_service.dart';
 
 class FareScreen extends StatefulWidget {
-  FareScreen({
+  const FareScreen({
     super.key,
-    required this.pickupLat,
-    required this.pickupLng,
-    required this.dropLat,
-    required this.dropLng,
     required this.distanceKm,
+    required this.trafficFactor,
+    required this.weatherFactor,
+    required this.demandSupplyFactor,
   });
-  final double? pickupLat;
-  final double? pickupLng;
-  final double? dropLat;
-  final double? dropLng;
+
   final double? distanceKm;
+  final double? trafficFactor;
+  final String? weatherFactor;
+  final double? demandSupplyFactor;
 
   @override
   _FareScreenState createState() => _FareScreenState();
@@ -23,45 +22,108 @@ class FareScreen extends StatefulWidget {
 
 class _FareScreenState extends State<FareScreen> {
   double? fare;
-  double? trafficFactor;
-  double? weatherFactor;
-  double? demandSupplyFactor;
+  String? message;
+  bool isLoading = false;
 
   void fetchFare() async {
+    setState(() {
+      isLoading = true;
+    });
+
     var result = await FareService.getFareEstimate(
-      pickupLat: widget.pickupLat,
-      pickupLng: widget.pickupLng,
-      dropLat: widget.dropLat,
-      dropLng: widget.dropLng,
       distanceKm: widget.distanceKm,
+      trafficFactor: widget.trafficFactor,
+      weatherFactor: widget.weatherFactor,
+      demandSupplyFactor: widget.demandSupplyFactor,
     );
 
-    if (result != null) {
-      setState(() {
-        fare = result["fare"];
-        trafficFactor = result["traffic_factor"];
-        weatherFactor = result["weather_factor"];
-        demandSupplyFactor = result["demand_supply_factor"];
-      });
-    }
+    setState(() {
+      isLoading = false;
+      if (result != null) {
+        fare = result["predicted_fare"];
+        message = result["message"];
+      } else {
+        message = "Failed to fetch fare.";
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Dynamic Fare Estimate")),
-      body: Center(
+      appBar: AppBar(
+        title: const Text("Dynamic Fare Estimate"),
+        backgroundColor: Colors.deepPurple,
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text("Fare: ₹${fare ?? 'Loading...'}"),
-            Text("Traffic Factor: ${trafficFactor ?? '-'}"),
-            Text("Weather Factor: ${weatherFactor ?? '-'}"),
-            Text("Demand-Supply Factor: ${demandSupplyFactor ?? '-'}"),
-            SizedBox(height: 20),
+            // Title
+            const Text(
+              "Your Fare Estimate",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Fare Display
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.deepPurple, width: 1),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    isLoading
+                        ? "Calculating..."
+                        : fare != null
+                            ? "₹${fare!.toStringAsFixed(2)}"
+                            : "Press the button to get fare",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  if (message != null)
+                    Text(
+                      message!,
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
+
+            // Fetch Fare Button
             ElevatedButton(
-              onPressed: fetchFare,
-              child: Text("Get Fare Estimate"),
+              onPressed: isLoading ? null : fetchFare,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      "Get Fare Estimate",
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
             ),
           ],
         ),

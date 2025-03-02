@@ -3,15 +3,17 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 
+import '../res/urls.dart';
+
 class TrafficService {
   final String apiKey;
 
   TrafficService(this.apiKey);
 
   Future<Map<String, dynamic>> getTraffic(
-      String origin, String destination) async {
-    final url = 'https://maps.googleapis.com/maps/api/directions/json'
-        '?origin=$origin&destination=$destination&departure_time=now&key=$apiKey';
+      double picklat, double picklon, double droplat, double droplon) async {
+    final url = '${urls.trafficDetails}'
+        '?origin=$picklat,$picklon&destination=$droplat,$droplon&departure_time=now&key=$apiKey';
 
     final response = await http.get(Uri.parse(url));
     debugPrint(response.body);

@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:major_project/assets/constants.dart';
 import 'package:major_project/view/book_taxi_screen.dart';
 import 'package:major_project/view/drop_location_screen.dart';
@@ -15,20 +12,22 @@ class BookingScreen extends StatefulWidget {
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  late String pickupAddress = '';
-  late String dropAddress = '';
-  double? distance;
+  String pickupAddress = 'Select Pickup location';
+  String dropAddress = 'Select Drop location';
+  double distanceInKm = 0.0;
   double? fare = 0.0;
   double pickupLat = 0.0;
   double pickupLon = 0.0;
   double dropLat = 0.0;
   double dropLon = 0.0;
+  double normalizedTrafficFactor = 0.0;
 
   late TrafficService trafficService;
 
   @override
   void initState() {
     super.initState();
+    ();
     trafficService =
         TrafficService(googleMapApi); // Initialize TrafficService with API key
   }
@@ -45,7 +44,7 @@ class _BookingScreenState extends State<BookingScreen> {
         pickupLat = selectedPickup["latitude"];
         pickupLon = selectedPickup["longitude"];
       });
-      _calculateDistanceAndFare();
+      _calculateDistance();
     }
   }
 
@@ -61,7 +60,7 @@ class _BookingScreenState extends State<BookingScreen> {
         dropLat = selectedDrop["latitude"];
         dropLon = selectedDrop["longitude"];
       });
-      _calculateDistanceAndFare();
+      _calculateDistance();
     }
   }
 
@@ -81,80 +80,104 @@ class _BookingScreenState extends State<BookingScreen> {
     return baseFare.clamp(minBaseFare, maxBaseFare);
   }
 
-  Future<void> _calculateDistanceAndFare() async {
-    if (pickupAddress != null && dropAddress != null) {
-      const String googleApiKey = googleMapApi;
+  Future<void> _calculateDistance() async {
+    try {
+      // Fetch Traffic Data
+      final trafficData = await trafficService.getTraffic(
+          pickupLat, pickupLon, dropLat, dropLon);
 
-      // Get distance
-      final distanceInKm = await getDistance(
-          pickupLat, pickupLon, dropLat, dropLon, googleApiKey);
+      // Safety check: Ensure response contains expected fields
+      if (trafficData.containsKey('routes') &&
+          (trafficData['routes'] as List).isNotEmpty &&
+          (trafficData['routes'][0]['legs'] as List).isNotEmpty) {
+        final leg = trafficData['routes'][0]['legs'][0];
 
-      // Get traffic data
-      final trafficData =
-          await trafficService.getTraffic(pickupAddress!, dropAddress!);
-      final trafficFactor = trafficData['routes'][0]['legs'][0]
-              ['duration_in_traffic']['value'] /
-          trafficData['routes'][0]['legs'][0]['duration']['value'];
+        // Extract Distance (convert from meters to km)
+        distanceInKm = leg['distance']['value'] / 1000.0;
 
-      // Get demand and supply data (Simulated API call for now)
-      final demandSupplyFactor =
-          await getDemandSupplyFactor(pickupAddress!, dropAddress!);
+        // Extract Duration
+        final int durationInSeconds = leg['duration']['value'];
+        final int durationInTrafficSeconds =
+            leg['duration_in_traffic']['value'];
 
-      // Get weather data (Simulated API call for now)
-      final weatherFactor = await getWeatherFactor(pickupAddress!);
+        // Calculate Traffic Factor
+        const double minTraffic = 0.5; // Minimum expected traffic factor
+        const double maxTraffic = 2.0; // Maximum expected traffic factor
+        double trafficFactor = durationInTrafficSeconds / durationInSeconds;
+        trafficFactor = trafficFactor.clamp(minTraffic, maxTraffic);
+        normalizedTrafficFactor =
+            1 + (trafficFactor - minTraffic) / (maxTraffic - minTraffic);
 
-      // Calculate dynamic base fare
-      final baseFare =
-          calculateBaseFare(trafficFactor, demandSupplyFactor, weatherFactor);
+        debugPrint("Traffic Factor: $trafficFactor");
+        debugPrint("Normalized Traffic Factor: $normalizedTrafficFactor");
+        debugPrint("distanceInKm Traffic Factor: $distanceInKm");
 
-      // Calculate final fare
-      final calculatedFare = calculateDynamicFare(
-          distanceInKm!, weatherFactor, trafficFactor, baseFare);
+        // Get Demand-Supply Factor (API Call)
+        // double demandSupplyFactor =
+        //     await getDemandSupplyFactor(pickupAddress, dropAddress);
 
-      setState(() {
-        distance = distanceInKm;
-        fare = calculatedFare;
-      });
+        // Get Weather Factor (API Call)
+        // double weatherFactor = await getWeatherFactor(pickupAddress);
+
+        // Calculate Base Fare
+        // double baseFare = calculateBaseFare(
+        //     normalizedTrafficFactor, demandSupplyFactor, weatherFactor);
+
+        // Calculate Final Fare
+        // double calculatedFare = calculateDynamicFare(
+        //     distanceInKm, weatherFactor, normalizedTrafficFactor, baseFare);
+
+        // Store Data and Update UI
+
+        // debugPrint("Final Fare: ₹${calculatedFare.toStringAsFixed(2)}");
+      } else {
+        throw Exception("Invalid traffic data response: No routes found");
+      }
+    } catch (e) {
+      debugPrint("Error fetching fare: $e");
     }
+    setState(() {
+      distanceInKm;
+    });
   }
 
-  Future<double> getDemandSupplyFactor(String pickup, String drop) async {
-    // Simulate demand-supply factor (1.0 = normal, >1.0 = high demand)
-    return 1.2; // Example: 20% higher fare due to high demand
-  }
+  // Future<double> getDemandSupplyFactor(String pickup, String drop) async {
+  //   // Simulate demand-supply factor (1.0 = normal, >1.0 = high demand)
+  //   return 1.2; // Example: 20% higher fare due to high demand
+  // }
+  //
+  // Future<double> getWeatherFactor(String location) async {
+  //   // Simulate weather impact (1.0 = normal, >1.0 = bad weather)
+  //   return 1.1; // Example: 10% higher fare due to rain
+  // }
 
-  Future<double> getWeatherFactor(String location) async {
-    // Simulate weather impact (1.0 = normal, >1.0 = bad weather)
-    return 1.1; // Example: 10% higher fare due to rain
-  }
+  // Future<double> getDistance(double pickupLat, double pickupLon, double dropLat,
+  //     double dropLon, String apiKey) async {
+  //   final url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
+  //       '?origins=$pickupLat,$pickupLon&destinations=$dropLat,$dropLon&key=$apiKey';
+  //
+  //   final response = await http.get(Uri.parse(url));
+  //
+  //   if (response.statusCode == 200) {
+  //     final data = json.decode(response.body);
+  //     final distanceInMeters =
+  //         data['rows'][0]['elements'][0]['distance']['value'];
+  //     return distanceInMeters / 1000; // Convert meters to kilometers
+  //   } else {
+  //     throw Exception('Failed to fetch distance');
+  //   }
+  // }
 
-  Future<double> getDistance(double pickupLat, double pickupLon, double dropLat,
-      double dropLon, String apiKey) async {
-    final url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
-        '?origins=$pickupLat,$pickupLon&destinations=$dropLat,$dropLon&key=$apiKey';
-
-    final response = await http.get(Uri.parse(url));
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final distanceInMeters =
-          data['rows'][0]['elements'][0]['distance']['value'];
-      return distanceInMeters / 1000; // Convert meters to kilometers
-    } else {
-      throw Exception('Failed to fetch distance');
-    }
-  }
-
-  double calculateDynamicFare(double distanceInKm, double weatherFactor,
-      double trafficFactor, double baseFare) {
-    const double perKmRate = 10.0; // Fare per kilometer
-
-    double fare = baseFare + (distanceInKm * perKmRate);
-    fare *= weatherFactor;
-    fare *= trafficFactor;
-
-    return fare;
-  }
+  // double calculateDynamicFare(double distanceInKm, double weatherFactor,
+  //     double trafficFactor, double baseFare) {
+  //   const double perKmRate = 10.0; // Fare per kilometer
+  //
+  //   double fare = baseFare + (distanceInKm * perKmRate);
+  //   fare *= weatherFactor;
+  //   fare *= trafficFactor;
+  //
+  //   return fare;
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -178,27 +201,24 @@ class _BookingScreenState extends State<BookingScreen> {
               onTap: _selectDrop,
             ),
             const Divider(),
-            if (distance != null)
-              Text('Distance: ${distance!.toStringAsFixed(2)} km'),
-            if (fare != null) Text('Total Fare: ₹${fare!.toStringAsFixed(2)}'),
+            Text('Distance: $distanceInKm km'),
             const Spacer(),
-            if (pickupAddress != null && dropAddress != null)
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => FareScreen(
-                              pickupLat: pickupLat,
-                              pickupLng: pickupLon,
-                              dropLat: dropLat,
-                              dropLng: dropLon,
-                              distanceKm: distance,
-                            )),
-                  );
-                },
-                child: const Text("Confirm Ride"),
-              ),
+            ElevatedButton(
+              onPressed: () {
+                _calculateDistance();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => FareScreen(
+                            distanceKm: distanceInKm,
+                            trafficFactor: normalizedTrafficFactor,
+                            weatherFactor: 'Rainy',
+                            demandSupplyFactor: 1.0,
+                          )),
+                );
+              },
+              child: const Text("Confirm Ride"),
+            ),
           ],
         ),
       ),
