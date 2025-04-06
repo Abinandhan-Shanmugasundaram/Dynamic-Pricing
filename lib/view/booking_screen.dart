@@ -202,6 +202,7 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
             const Divider(),
             Text('Distance: $distanceInKm km'),
+            Text('Traffic Factor: $normalizedTrafficFactor'),
             const Spacer(),
             ElevatedButton(
               onPressed: () {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/dynamic_pricing_service.dart';
 
@@ -29,13 +30,15 @@ class _FareScreenState extends State<FareScreen> {
     setState(() {
       isLoading = true;
     });
+    final prefs = await SharedPreferences.getInstance();
+    int? batteryLevel = prefs.getInt('battery_percentage');
 
     var result = await FareService.getFareEstimate(
-      distanceKm: widget.distanceKm,
-      trafficFactor: widget.trafficFactor,
-      weatherFactor: widget.weatherFactor,
-      demandSupplyFactor: widget.demandSupplyFactor,
-    );
+        distanceKm: widget.distanceKm,
+        trafficFactor: widget.trafficFactor,
+        weatherFactor: widget.weatherFactor,
+        demandSupplyFactor: widget.demandSupplyFactor,
+        batteryStatus: batteryLevel);
 
     setState(() {
       isLoading = false;

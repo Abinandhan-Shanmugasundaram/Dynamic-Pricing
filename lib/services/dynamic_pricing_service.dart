@@ -11,13 +11,13 @@ class FareService {
     required double? trafficFactor,
     required String? weatherFactor,
     required double? demandSupplyFactor,
+    int? batteryStatus,
   }) async {
     try {
-      final url = Uri.parse(
-          urls.pricing); // Ensure it's "http://127.0.0.1:5000/predict"
+      final url = Uri.parse(urls.pricing);
       debugPrint("Pricing URL -> $url");
       String body =
-          '{"distance_km": $distanceKm,"traffic_factor": $trafficFactor,"weather_factor": "Clear","demand_supply_factor": 1}';
+          '{"distance_km": $distanceKm,"traffic_factor": $trafficFactor,"weather_factor": "Rainy","demand_supply_factor": 1,"battery_percent" : $batteryStatus}';
       debugPrint("body vbhnjkjhg $body");
       final response = await http.post(
         url,

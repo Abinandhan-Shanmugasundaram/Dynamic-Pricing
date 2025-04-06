@@ -1,0 +1,2 @@
+/Users/AbinandhanS/Downloads/major_project/android/app/.cxx/Debug/5r4m585w/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/AbinandhanS/Downloads/major_project/android/app/.cxx/Debug/5r4m585w/armeabi-v7a/CMakeFiles/rebuild_cache.dir

@@ -49,6 +49,8 @@ dependencies:
   google_maps_webservice:
   google_places_flutter:
   google_api_headers:
+  battery_plus:
+  shared_preferences:
 
 
 

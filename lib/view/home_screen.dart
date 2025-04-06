@@ -1,8 +1,31 @@
+import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:major_project/view/booking_screen.dart';
 import 'package:major_project/view/profile_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final Battery _battery = Battery();
+
+  @override
+  void initState() {
+    super.initState();
+    _saveBatteryLevelToPrefs();
+  }
+
+  Future<void> _saveBatteryLevelToPrefs() async {
+    final batteryLevel = await _battery.batteryLevel;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('battery_percentage', batteryLevel);
+    // You can log it if you want to confirm
+    // print('Battery saved: $batteryLevel%');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,8 +80,7 @@ class HomeScreen extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(vertical: 10),
                     child: ListTile(
                       leading: const Icon(Icons.history),
-                      title:
-                          const Text("Ride to XYZ"), // Replace with actual data
+                      title: const Text("Ride to XYZ"),
                       subtitle: const Text("₹250 - 10km"),
                       trailing: const Icon(Icons.arrow_forward),
                       onTap: () {
